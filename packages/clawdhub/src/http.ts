@@ -1,5 +1,6 @@
 import type { ArkValidator } from '@clawdhub/schema'
 import { parseArk } from '@clawdhub/schema'
+import pRetry, { AbortError } from 'p-retry'
 
 type RequestArgs =
   | { method: 'GET' | 'POST'; path: string; token?: string; body?: unknown }
@@ -17,19 +18,28 @@ export async function apiRequest<T>(
   schema?: ArkValidator<T>,
 ): Promise<T> {
   const url = 'url' in args ? args.url : new URL(args.path, registry).toString()
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (args.token) headers.Authorization = `Bearer ${args.token}`
-  let body: string | undefined
-  if (args.method === 'POST') {
-    headers['Content-Type'] = 'application/json'
-    body = JSON.stringify(args.body ?? {})
-  }
-  const response = await fetch(url, { method: args.method, headers, body })
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(text || `HTTP ${response.status}`)
-  }
-  const json = (await response.json()) as unknown
+  const json = await pRetry(
+    async () => {
+      const headers: Record<string, string> = { Accept: 'application/json' }
+      if (args.token) headers.Authorization = `Bearer ${args.token}`
+      let body: string | undefined
+      if (args.method === 'POST') {
+        headers['Content-Type'] = 'application/json'
+        body = JSON.stringify(args.body ?? {})
+      }
+      const response = await fetch(url, { method: args.method, headers, body })
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        const message = text || `HTTP ${response.status}`
+        if (response.status === 429 || response.status >= 500) {
+          throw new Error(message)
+        }
+        throw new AbortError(message)
+      }
+      return (await response.json()) as unknown
+    },
+    { retries: 2 },
+  )
   if (schema) return parseArk(schema, json, 'API response')
   return json as T
 }
@@ -38,8 +48,18 @@ export async function downloadZip(registry: string, args: { slug: string; versio
   const url = new URL('/api/download', registry)
   url.searchParams.set('slug', args.slug)
   if (args.version) url.searchParams.set('version', args.version)
-  const response = await fetch(url.toString(), { method: 'GET' })
-  if (!response.ok) throw new Error(await response.text())
-  const buffer = new Uint8Array(await response.arrayBuffer())
-  return buffer
+  return pRetry(
+    async () => {
+      const response = await fetch(url.toString(), { method: 'GET' })
+      if (!response.ok) {
+        const message = (await response.text().catch(() => '')) || `HTTP ${response.status}`
+        if (response.status === 429 || response.status >= 500) {
+          throw new Error(message)
+        }
+        throw new AbortError(message)
+      }
+      return new Uint8Array(await response.arrayBuffer())
+    },
+    { retries: 2 },
+  )
 }

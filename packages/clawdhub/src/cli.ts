@@ -2,7 +2,7 @@
 import { mkdir, rm, stat } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import { stdin } from 'node:process'
-import { createInterface } from 'node:readline/promises'
+import { confirm, isCancel } from '@clack/prompts'
 import {
   ApiCliPublishResponseSchema,
   ApiCliUploadUrlResponseSchema,
@@ -146,6 +146,10 @@ function resolveGlobalOpts(): GlobalOpts {
 }
 
 async function cmdLogin(opts: GlobalOpts, tokenFlag?: string) {
+  const globalFlags = program.opts<{ input?: boolean }>()
+  const inputAllowed = globalFlags.input !== false
+  if (!tokenFlag && !inputAllowed) fail('Token required (use --token or remove --no-input)')
+
   const token = tokenFlag || (await promptHidden('ClawdHub token: '))
   if (!token) fail('Token required')
 
@@ -338,7 +342,7 @@ async function cmdUpdate(
           continue
         }
         const confirm = await promptConfirm(
-          `${entry}: local changes (no match). Overwrite with ${options.version ?? latest}? [y/N] `,
+          `${entry}: local changes (no match). Overwrite with ${options.version ?? latest}?`,
         )
         if (!confirm) {
           console.log(`${entry}: skipped`)
@@ -572,10 +576,9 @@ async function promptHidden(prompt: string) {
 }
 
 async function promptConfirm(prompt: string) {
-  const rl = createInterface({ input: stdin, output: process.stdout })
-  const answer = (await rl.question(prompt)).trim().toLowerCase()
-  rl.close()
-  return answer === 'y' || answer === 'yes'
+  const answer = await confirm({ message: prompt })
+  if (isCancel(answer)) return false
+  return Boolean(answer)
 }
 
 function isInteractive() {

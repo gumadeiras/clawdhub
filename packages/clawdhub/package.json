@@ -20,9 +20,11 @@
   },
   "dependencies": {
     "@clawdhub/schema": "workspace:*",
+    "@clack/prompts": "^0.11.0",
     "commander": "^14.0.2",
     "fflate": "^0.8.2",
     "ora": "^9.0.0",
+    "p-retry": "^7.1.1",
     "semver": "^7.7.3"
   },
   "devDependencies": {
