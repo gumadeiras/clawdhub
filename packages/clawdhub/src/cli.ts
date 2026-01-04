@@ -307,18 +307,18 @@ async function cmdUpdate(
         }
       }
 
-      let resolveResult: ResolveResult | null = null
+      let resolveResult: ResolveResult
       if (localFingerprint) {
         resolveResult = await resolveSkillVersion(opts.registry, entry, localFingerprint)
-      }
-
-      if (!resolveResult) {
+      } else {
+        const url = new URL(ApiRoutes.skill, opts.registry)
+        url.searchParams.set('slug', entry)
         const meta = await apiRequest(
           opts.registry,
-          { method: 'GET', path: `/api/skill?slug=${encodeURIComponent(entry)}` },
+          { method: 'GET', url: url.toString() },
           ApiSkillMetaResponseSchema,
         )
-        resolveResult = { match: null, latestVersion: meta.latestVersion }
+        resolveResult = { match: null, latestVersion: meta.latestVersion ?? null }
       }
 
       const latest = resolveResult.latestVersion?.version ?? null
