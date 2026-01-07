@@ -76,7 +76,7 @@ type ListVersionsResult = {
   nextCursor: string | null
 }
 
-export const searchSkillsV1Http = httpAction(async (ctx, request) => {
+async function searchSkillsV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'read')
   if (!rate.ok) return rate.response
 
@@ -107,9 +107,11 @@ export const searchSkillsV1Http = httpAction(async (ctx, request) => {
     200,
     rate.headers,
   )
-})
+}
 
-export const resolveSkillVersionV1Http = httpAction(async (ctx, request) => {
+export const searchSkillsV1Http = httpAction(searchSkillsV1Handler)
+
+async function resolveSkillVersionV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'read')
   if (!rate.ok) return rate.response
 
@@ -127,9 +129,11 @@ export const resolveSkillVersionV1Http = httpAction(async (ctx, request) => {
     200,
     rate.headers,
   )
-})
+}
 
-export const listSkillsV1Http = httpAction(async (ctx, request) => {
+export const resolveSkillVersionV1Http = httpAction(resolveSkillVersionV1Handler)
+
+async function listSkillsV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'read')
   if (!rate.ok) return rate.response
 
@@ -165,9 +169,11 @@ export const listSkillsV1Http = httpAction(async (ctx, request) => {
   )
 
   return json({ items, nextCursor: result.nextCursor ?? null }, 200, rate.headers)
-})
+}
 
-export const skillsGetRouterV1Http = httpAction(async (ctx, request) => {
+export const listSkillsV1Http = httpAction(listSkillsV1Handler)
+
+async function skillsGetRouterV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'read')
   if (!rate.ok) return rate.response
 
@@ -323,9 +329,11 @@ export const skillsGetRouterV1Http = httpAction(async (ctx, request) => {
   }
 
   return text('Not found', 404, rate.headers)
-})
+}
 
-export const publishSkillV1Http = httpAction(async (ctx, request) => {
+export const skillsGetRouterV1Http = httpAction(skillsGetRouterV1Handler)
+
+async function publishSkillV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'write')
   if (!rate.ok) return rate.response
 
@@ -356,9 +364,30 @@ export const publishSkillV1Http = httpAction(async (ctx, request) => {
   }
 
   return text('Unsupported content type', 415, rate.headers)
-})
+}
 
-export const skillsPostRouterV1Http = httpAction(async (ctx, request) => {
+export const publishSkillV1Http = httpAction(publishSkillV1Handler)
+
+type FileLike = {
+  name: string
+  size: number
+  type: string
+  arrayBuffer: () => Promise<ArrayBuffer>
+}
+
+function isFileLike(entry: FormDataEntryValue): entry is FileLike {
+  if (typeof entry === 'string') return false
+  if (typeof File !== 'undefined' && entry instanceof File) return true
+  const candidate = entry as Partial<FileLike>
+  return (
+    typeof candidate.name === 'string' &&
+    typeof candidate.size === 'number' &&
+    typeof candidate.type === 'string' &&
+    typeof candidate.arrayBuffer === 'function'
+  )
+}
+
+async function skillsPostRouterV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'write')
   if (!rate.ok) return rate.response
 
@@ -378,9 +407,11 @@ export const skillsPostRouterV1Http = httpAction(async (ctx, request) => {
   } catch {
     return text('Unauthorized', 401, rate.headers)
   }
-})
+}
 
-export const skillsDeleteRouterV1Http = httpAction(async (ctx, request) => {
+export const skillsPostRouterV1Http = httpAction(skillsPostRouterV1Handler)
+
+async function skillsDeleteRouterV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'write')
   if (!rate.ok) return rate.response
 
@@ -398,9 +429,11 @@ export const skillsDeleteRouterV1Http = httpAction(async (ctx, request) => {
   } catch {
     return text('Unauthorized', 401, rate.headers)
   }
-})
+}
 
-export const whoamiV1Http = httpAction(async (ctx, request) => {
+export const skillsDeleteRouterV1Http = httpAction(skillsDeleteRouterV1Handler)
+
+async function whoamiV1Handler(ctx: ActionCtx, request: Request) {
   const rate = await applyRateLimit(ctx, request, 'read')
   if (!rate.ok) return rate.response
 
@@ -420,7 +453,9 @@ export const whoamiV1Http = httpAction(async (ctx, request) => {
   } catch {
     return text('Unauthorized', 401, rate.headers)
   }
-})
+}
+
+export const whoamiV1Http = httpAction(whoamiV1Handler)
 
 async function parseMultipartPublish(
   ctx: ActionCtx,
@@ -461,7 +496,7 @@ async function parseMultipartPublish(
   }> = []
 
   for (const entry of form.getAll('files')) {
-    if (!(entry instanceof File)) continue
+    if (!isFileLike(entry)) continue
     const path = entry.name
     const size = entry.size
     const contentType = entry.type || undefined
@@ -477,8 +512,8 @@ async function parseMultipartPublish(
     version: payload.version,
     changelog: typeof payload.changelog === 'string' ? payload.changelog : '',
     tags: Array.isArray(payload.tags) ? payload.tags : undefined,
-    forkOf: payload.forkOf,
     files,
+    ...(payload.forkOf === undefined ? {} : { forkOf: payload.forkOf }),
   }
 
   return parsePublishBody(body)
@@ -659,4 +694,15 @@ function toHex(bytes: Uint8Array) {
   let out = ''
   for (const byte of bytes) out += byte.toString(16).padStart(2, '0')
   return out
+}
+
+export const __handlers = {
+  searchSkillsV1Handler,
+  resolveSkillVersionV1Handler,
+  listSkillsV1Handler,
+  skillsGetRouterV1Handler,
+  publishSkillV1Handler,
+  skillsPostRouterV1Handler,
+  skillsDeleteRouterV1Handler,
+  whoamiV1Handler,
 }
