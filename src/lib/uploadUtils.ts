@@ -53,10 +53,10 @@ export function formatPublishError(error: unknown) {
   }
   if (error instanceof Error) {
     const cleaned = error.message
-      .replace(/\\[CONVEX[^\\]]*\\]\\s*/g, '')
-      .replace(/\\[Request ID:[^\\]]*\\]\\s*/g, '')
-      .replace(/^Server Error Called by client\\s*/i, '')
-      .replace(/^ConvexError:\\s*/i, '')
+      .replace(/\[CONVEX[^\]]*\]\s*/g, '')
+      .replace(/\[Request ID:[^\]]*\]\s*/g, '')
+      .replace(/^ConvexError:\s*/i, '')
+      .replace(/^Server Error Called by client\s*/i, '')
       .trim()
     if (cleaned && cleaned !== 'Server Error') return cleaned
   }
@@ -76,6 +76,18 @@ export function isTextFile(file: File) {
 export async function readText(blob: Blob) {
   if (typeof (blob as Blob & { text?: unknown }).text === 'function') {
     return (blob as Blob & { text: () => Promise<string> }).text()
+  }
+  if (typeof (blob as Blob & { arrayBuffer?: unknown }).arrayBuffer === 'function') {
+    const buffer = await (blob as Blob & { arrayBuffer: () => Promise<ArrayBuffer> }).arrayBuffer()
+    return new TextDecoder().decode(new Uint8Array(buffer))
+  }
+  if (typeof FileReader !== 'undefined' && blob instanceof Blob) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(reader.error ?? new Error('Could not read blob.'))
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+      reader.readAsText(blob)
+    })
   }
   return new Response(blob as BodyInit).text()
 }
