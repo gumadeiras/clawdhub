@@ -48,3 +48,17 @@ read_when:
 
 ## Sync
 - `bun clawdhub sync --dry-run --all`
+
+## Playwright (menu smoke)
+
+Run against prod:
+
+```
+PLAYWRIGHT_BASE_URL=https://clawdhub.com bun run test:pw
+```
+
+Run against a local preview server:
+
+```
+bun run test:e2e:local
+```

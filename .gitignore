@@ -21,3 +21,6 @@ todos.json
 .vscode
 .env*.local
 coverage
+playwright-report
+test-results
+.playwright
