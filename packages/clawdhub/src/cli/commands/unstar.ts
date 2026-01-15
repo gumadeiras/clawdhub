@@ -1,6 +1,6 @@
 import { readGlobalConfig } from '../../config.js'
 import { apiRequest } from '../../http.js'
-import { ApiRoutes, parseArk } from '../../schema/index.js'
+import { ApiRoutes } from '../../schema/index.js'
 import { getRegistry } from '../registry.js'
 import type { GlobalOpts } from '../types.js'
 import { createSpinner, fail, formatError, isInteractive, promptConfirm } from '../ui.js'
