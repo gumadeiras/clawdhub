@@ -27,22 +27,21 @@ function Stars() {
   return (
     <main className="section">
       <h1 className="section-title">Your highlights</h1>
-      <p className="section-subtitle">Skills you've starred for quick access.</p>
+      <p className="section-subtitle">Skills you have starred for quick access.</p>
       <div className="grid">
         {skills.length === 0 ? (
           <div className="card">No stars yet.</div>
         ) : (
           skills.map((skill) => (
-            <div key={skill._id} className="card">
-              <Link to="/skills/$slug" params={{ slug: skill.slug }} className="card-link">
-                <h3 className="section-title" style={{ fontSize: '1.2rem', margin: 0 }}>
-                  {skill.displayName}
-                </h3>
+            <div key={skill._id} className="card skill-card">
+              <Link to="/skills/$slug" params={{ slug: skill.slug }} className="skill-card-link">
+                <h3 className="skill-card-title">{skill.displayName}</h3>
               </Link>
-              <div className="card-actions">
+              <div className="skill-card-footer">
                 <span className="stat">⭐ {skill.stats.stars}</span>
                 <button
-                  className="button button-small"
+                  className="star-toggle is-active"
+                  type="button"
                   onClick={async () => {
                     try {
                       await toggleStar({ skillId: skill._id })
@@ -53,7 +52,7 @@ function Stars() {
                   }}
                   aria-label={`Unstar ${skill.displayName}`}
                 >
-                  Unstar
+                  <span aria-hidden="true">★</span>
                 </button>
               </div>
             </div>

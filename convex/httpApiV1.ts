@@ -1061,6 +1061,8 @@ export const __handlers = {
   soulsPostRouterV1Handler,
   soulsDeleteRouterV1Handler,
   whoamiV1Handler,
+  starsToggleRouterV1Handler,
+  starsDeleteRouterV1Handler,
 }
 
 // ============ STARS API ============
@@ -1074,12 +1076,12 @@ async function starsToggleRouterV1Handler(ctx: ActionCtx, request: Request) {
   const slug = segments[0]?.trim().toLowerCase() ?? ''
 
   try {
-    const { userId } = await requireApiTokenUser(ctx, request)
+    await requireApiTokenUser(ctx, request)
     // Get skill by slug
-    const skill = await ctx.runQuery(api.skills.getBySlugInternal, { slug })
+    const skill = await ctx.runQuery(internal.skills.getSkillBySlugInternal, { slug })
     if (!skill) return text('Skill not found', 404, rate.headers)
 
-    const result = await ctx.runMutation(internal.stars.toggle, { skillId: skill._id })
+    const result = await ctx.runMutation(api.stars.toggle, { skillId: skill._id })
     return json(result, 200, rate.headers)
   } catch (error) {
     return text('Unauthorized', 401, rate.headers)
@@ -1097,15 +1099,15 @@ async function starsDeleteRouterV1Handler(ctx: ActionCtx, request: Request) {
   const slug = segments[0]?.trim().toLowerCase() ?? ''
 
   try {
-    const { userId } = await requireApiTokenUser(ctx, request)
+    await requireApiTokenUser(ctx, request)
     // Get skill by slug
-    const skill = await ctx.runQuery(api.skills.getBySlugInternal, { slug })
+    const skill = await ctx.runQuery(internal.skills.getSkillBySlugInternal, { slug })
     if (!skill) return text('Skill not found', 404, rate.headers)
 
     const isCurrentlyStarred = await ctx.runQuery(api.stars.isStarred, { skillId: skill._id })
     let unstarred = false
     if (isCurrentlyStarred) {
-      await ctx.runMutation(internal.stars.toggle, { skillId: skill._id })
+      await ctx.runMutation(api.stars.toggle, { skillId: skill._id })
       unstarred = true
     }
     return json({ ok: true, unstarred, alreadyUnstarred: !unstarred }, 200, rate.headers)
@@ -1115,21 +1117,3 @@ async function starsDeleteRouterV1Handler(ctx: ActionCtx, request: Request) {
 }
 
 export const starsDeleteRouterV1Http = httpAction(starsDeleteRouterV1Handler)
-
-export const __handlers = {
-  searchSkillsV1Handler,
-  resolveSkillVersionV1Handler,
-  listSkillsV1Handler,
-  skillsGetRouterV1Handler,
-  publishSkillV1Handler,
-  skillsPostRouterV1Handler,
-  skillsDeleteRouterV1Handler,
-  listSoulsV1Handler,
-  soulsGetRouterV1Handler,
-  publishSoulV1Handler,
-  soulsPostRouterV1Handler,
-  soulsDeleteRouterV1Handler,
-  whoamiV1Handler,
-  starsToggleRouterV1Handler,
-  starsDeleteRouterV1Handler,
-}
